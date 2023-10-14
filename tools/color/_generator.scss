@@ -1,0 +1,69 @@
+@use 'sass:color';
+@use 'sass:math';
+
+
+$Yr: math.div(87098, 409605);
+$Yg: math.div(175762, 245763);
+$Yb: math.div(12673, 175545);
+
+
+@function scale($v, $w, $n, $x, $p: 100) {
+  $i: if(($w >= 0), ($x - $v), ($v - $n));
+  $s: math.div(($w * $i), $p);
+
+  @return ($v + $s);
+}
+
+
+@function lin-rgb-comp($v) {
+  $v: math.div($v, 255);
+  $cond: ($v < 0.04045);
+  $true: math.div($v, 12.92);
+  $false: math.pow(math.div(($v + 0.055), 1.055), 2.4);
+
+  @return if($cond, $true, $false);
+}
+
+
+@function luminance($color) {
+  $r: lin-rgb-comp(color.red($color)) * $Yr;
+  $g: lin-rgb-comp(color.green($color)) * $Yg;
+  $b: lin-rgb-comp(color.blue($color)) * $Yb;
+
+  @return ($r + $g + $b);
+}
+
+
+@function contrast($a, $b) {
+  $la: luminance($a);
+  $lb: luminance($b);
+  $ln: math.min($la, $lb) + 0.05;
+  $lx: math.max($la, $lb) + 0.05;
+
+  @return math.div($lx, $ln);
+}
+
+
+@function mod-color($color, $mod, $h, $s, $l) {
+  $h: scale(color.hue($color), $h, 0, 359);
+  $s: scale(color.saturation($color), $s, 0, 100);
+  $color: color.mix($mod, $color, $l * 1%);
+  $color: color.change($color, $hue: $h, $saturation: $s);
+
+  @return $color;
+}
+
+
+@function build-bg($bg, $cr: 1.2) {
+  $fg: $bg;
+  $ccr: contrast($bg, $fg);
+  $c: 0;
+
+  @while $ccr < $cr {
+    $fg: mod-color($fg, white, 0, ($c * -1), $c);
+    $ccr: contrast($bg, $fg);
+    $c: ($c + 0.01);
+  }
+
+  @return $fg;
+}
